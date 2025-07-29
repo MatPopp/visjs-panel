@@ -1,4 +1,10 @@
-
+// a function that writes the event data into the event queue
+function writeEventData(event_name, event_params){
+    queue = JSON.parse(data.network_event_queue)
+    queue.push({"event_name":event_name, "event_params":event_params})
+    data.network_event_queue = JSON.stringify(queue)
+    //console.log(event_name + " event added to queue:", data.network_event_queue)
+}
 
 // a function that sets options for better network behavior
 function setEventFunctions(network){
@@ -7,7 +13,11 @@ function setEventFunctions(network){
         if (params.nodes.length > 0) {
             console.log(params)
             let data = state.nodes.get(params.nodes[0]); // get the data from selected node
+
+            // add the click event to the network_event_queue
+            writeEventData("click", params);
             }
+
     });
 
     network.on('dragEnd', function (params) {
@@ -20,6 +30,9 @@ function setEventFunctions(network){
             node.fixed=true
             state.nodes.update(node)
             data.nodes = JSON.stringify(state.nodes.get())
+
+            // add the dragEnd event to the network_event_queue
+            writeEventData("dragEnd", params);
         }
 
     });
@@ -36,6 +49,9 @@ function setEventFunctions(network){
             node.fixed=false
             console.log(node)
             state.nodes.update(node)
+
+            // add the dragStart event to the network_event_queue
+            writeEventData("dragStart", params);
         }
     });
 
@@ -46,6 +62,7 @@ function setEventFunctions(network){
               network.openCluster(params.nodes[0]);
               return
             }
+            writeEventData("doubleClick", params);
         };
 
         node=state.nodes.get(params.nodes[0])
@@ -64,6 +81,8 @@ function setEventFunctions(network){
 state.container = network_div   // network div from panel template.
 state.nodes = new vis.DataSet(JSON.parse(data.nodes));
 state.edges = new vis.DataSet(JSON.parse(data.edges));
+
+
 
 console.log(state.nodes, state.edges)
 // create a network
