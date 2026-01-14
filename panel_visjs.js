@@ -20,6 +20,59 @@ function setEventFunctions(network){
 
     });
 
+    network.on('doubleClick', function (params) {
+
+        if (params.nodes.length == 1) {
+            if (network.isCluster(params.nodes[0]) == true) {
+              network.openCluster(params.nodes[0]);
+              return
+            }
+            writeEventData("doubleClick", params);
+        };
+
+        node=state.nodes.get(params.nodes[0])
+        node.fixed = false
+        state.nodes.update(node)
+    })
+
+    network.on('oncontext', function (params) {
+        console.log("oncontext")
+        // add the dragEnd event to the network_event_queue
+        writeEventData("oncontext", params)
+    })
+
+    network.on('selectNode', function (params) {
+        console.log("selectNode")
+        // add the selectNode event to the network_event_queue
+        writeEventData("selectNode", params);
+    })
+
+    network.on('selectEdge', function (params) {
+        console.log("selectEdge")
+        // add the selectEdge event to the network_event_queue
+        writeEventData("selectEdge", params);
+    })
+
+    network.on('hoverNode', function (params) {
+        console.log("hoverNode")
+        // add the hoverNode event to the network_event_queue
+        writeEventData("hoverNode", params);
+    })
+
+    network.on('hoverEdge', function (params) {
+        console.log("hoverEdge")
+        // add the hoverEdge event to the network_event_queue
+        writeEventData("hoverEdge", params);
+    })
+
+    network.on('zoom', function (params) {
+        console.log("zoom")
+        // add the zoom event to the network_event_queue
+        writeEventData("zoom", params);
+    })
+
+
+
     network.on('dragEnd', function (params) {
         if (params.nodes.length>0){
             node = state.nodes.get(params.nodes[0])
@@ -54,27 +107,12 @@ function setEventFunctions(network){
             writeEventData("dragStart", params);
         }
     });
-
-    network.on('doubleClick', function (params) {
-
-        if (params.nodes.length == 1) {
-            if (network.isCluster(params.nodes[0]) == true) {
-              network.openCluster(params.nodes[0]);
-              return
-            }
-            writeEventData("doubleClick", params);
-        };
-
-        node=state.nodes.get(params.nodes[0])
-        node.fixed = false
-        state.nodes.update(node)
-    })
-
     network.on("selectNode", function (params) {
         console.log("selectNode")
         data.nodes = JSON.stringify(state.nodes.get())
         data.edges = JSON.stringify(state.edges.get())
          });
+    network.on()
 }
 
 

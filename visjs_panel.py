@@ -129,9 +129,10 @@ class GraphDetailTool:
                                  network_event_callback=self.network_event_callback,
                                  )
 
-        self.detail_markdown = pn.pane.Markdown("## Click on a node to see details")
-        self.detail_column = pn.Column(self.detail_markdown)
-        self._panel = pn.Row(self.visjs_panel, self.detail_column)
+        self.detail_markdown = pn.pane.Markdown("## Click on a node to see details", name = "Details")
+        self.visualization_markdown = pn.pane.Markdown("## Visualization", name="Visualization")
+        self.detail_tabs = pn.Tabs(self.detail_markdown, self.visualization_markdown)
+        self._panel = pn.Row(self.visjs_panel, self.detail_tabs)
 
     def network_event_callback(self, event_name, event_params_dict):
         """
@@ -240,6 +241,42 @@ def example_details_images():
 
     pn.serve(graph_tool_panel, threaded=True)
 
+def example_in_chat_panel():
+    nodes = [
+        {"id": 1, "label": "Würzburg", "shape": "ellipse", "color": "green"},
+        {"id": 2, "label": "Festung Marienberg", "shape": "ellipse", "color": "gray"},
+        {"id": 3, "label": "Residenz", "shape": "ellipse", "color": "gray"},
+        {"id": 4, "label": "Käppele", "shape": "ellipse", "color": "gray"},
+        {"id": 5, "shape": "image", "size": 50,
+         "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Festung_Marienberg_-_W%C3%BCrzburg_-_2013.jpg/1024px-Festung_Marienberg_-_W%C3%BCrzburg_-_2013.jpg"},
+        {"id": 6, "shape": "image", "size": 50,
+         "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/West_facade_of_the_Wurzburg_Residence_08.jpg/1024px-West_facade_of_the_Wurzburg_Residence_08.jpg"},
+        {"id": 7, "shape": "image", "size": 50,
+         "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Kaeppele_wuerzburg_festungsfoto.jpg/1024px-Kaeppele_wuerzburg_festungsfoto.jpg"},
+    ]
+    edges = [
+        {"from": 1, "to": 2, "label": "HasBuilding", "arrows": "to", "color": "black"},
+        {"from": 1, "to": 3, "label": "HasBuilding", "arrows": "to", "color": "black"},
+        {"from": 1, "to": 4, "label": "HasBuilding", "arrows": "to", "color": "black"},
+        {"from": 2, "to": 5, "label": "HasImage", "arrows": "to", "color": "black"},
+        {"from": 3, "to": 6, "label": "HasImage", "arrows": "to", "color": "black"},
+        {"from": 4, "to": 7, "label": "HasImage", "arrows": "to", "color": "black"},
+    ]
+    graph_tool_panel = GraphDetailTool(nodes=json.dumps(nodes), edges=json.dumps(edges))
+    chat_interface = pn.chat.ChatInterface(name="Chat with Graph Tool",)
+
+    chat_interface.send("please show me the graph interface :)")
+    chat_interface.send(pn.chat.ChatMessage(
+                object=graph_tool_panel,
+                user="🤖 Assistant",
+                show_edit_icon=False,
+                show_timestamp=False,
+                show_reaction_icons=False
+            ),)
+
+    main_panel = pn.Row(chat_interface)
+    pn.serve(main_panel, threaded=True)
+
 def example_rotating_circles():
     ## create some dummy data
     import numpy as np
@@ -320,7 +357,8 @@ def example_rotating_circles():
 
 if __name__ == '__main__':
 
- #   example_hierarchy()
-    #example_images()
-  #  example_rotating_circles()
+    example_hierarchy()
+    example_images()
+    example_rotating_circles()
     example_details_images()
+    example_in_chat_panel()
