@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+src/visjs_panel/__init__.py
+src/visjs_panel/visjs_panel.py
+src/visjs_panel.egg-info/PKG-INFO
+src/visjs_panel.egg-info/SOURCES.txt
+src/visjs_panel.egg-info/dependency_links.txt
+src/visjs_panel.egg-info/requires.txt
+src/visjs_panel.egg-info/top_level.txt
