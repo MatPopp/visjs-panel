@@ -28,6 +28,12 @@ function setEventFunctions(network){
               return
             }
             writeEventData("doubleClick", params);
+
+            // Re-enable physics when the user double-clicks a node
+            const currentOptions = state.options || {};
+            const physicsOptions = Object.assign({}, currentOptions.physics, { enabled: true });
+            state.options = Object.assign({}, currentOptions, { physics: physicsOptions });
+            network.setOptions({ physics: physicsOptions });
         };
 
         node=state.nodes.get(params.nodes[0])
@@ -120,30 +126,42 @@ state.container = network_div   // network div from panel template.
 state.nodes = new vis.DataSet(JSON.parse(data.nodes));
 state.edges = new vis.DataSet(JSON.parse(data.edges));
 
+// Optionen aus dem Python-Widget lesen (data.options als JSON-String)
+let parsedOptions = {};
+try {
+  if (data.options) {
+    parsedOptions = JSON.parse(data.options);
+  }
+} catch (e) {
+  console.warn('Failed to parse options from data.options, using defaults instead.', e);
+  parsedOptions = {};
+}
 
+// Default-Options, die bei Bedarf mit uebergebenen Optionen gemerged werden
+const defaultOptions = {
+  manipulation: {
+    enabled: true,
+    initiallyActive: true,
+    addNode: true,
+    addEdge: true,
+    editEdge: true,
+    deleteNode: true,
+    deleteEdge: true,
+  },
+  interaction: { multiselect: true },
+  nodes: {
+    shape: "dot",
+    size: 10,
+  },
+};
 
-console.log(state.nodes, state.edges)
-// create a network
+// Einfache Merge-Logik: uebergebene Optionen ueberschreiben Defaults auf oberster Ebene
+state.options = Object.assign({}, defaultOptions, parsedOptions);
+
 network_data = {
     nodes: state.nodes,
     edges: state.edges,
 };
-
-state.options = {
-    manipulation: {
-      enabled: true,
-      initiallyActive: true,
-      addNode: true,
-      addEdge: true,
-      editEdge: true,
-      deleteNode: true,
-      deleteEdge: true,
-    },
-    interaction:{multiselect:true},
-    nodes:{shape:"dot",
-      size:10,
-    }
-  };
 
 state.network = new vis.Network(state.container, network_data, state.options);
 
@@ -155,4 +173,3 @@ setEventFunctions(state.network)
 state.update_nodes = function(){
     state.nodes.updateOnly(JSON.parse(data.nodes))
 }
-
