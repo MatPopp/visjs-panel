@@ -1,6 +1,6 @@
 [project]
 name = "visjs-panel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,3 +8,9 @@ dependencies = [
     "panel>=1.8.5",
 ]
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+# add extensions or files that need to be in the package
+"some-package" = ["*.js"]

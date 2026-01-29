@@ -121,6 +121,8 @@ class VisJS(ReactiveHTML):
             if node_ids:
                 for node_id in node_ids:
                     self.expand_node(node_id)
+        if event_name == "oncontext":
+            print("Node has been rightclicked")
 
 class GraphDetailTool:
     def __init__(self, nodes, edges):

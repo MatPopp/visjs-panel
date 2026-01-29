@@ -43,7 +43,6 @@ function setEventFunctions(network){
 
     network.on('oncontext', function (params) {
         console.log("oncontext")
-        // add the dragEnd event to the network_event_queue
         writeEventData("oncontext", params)
     })
 
