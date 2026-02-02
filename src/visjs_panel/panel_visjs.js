@@ -121,9 +121,63 @@ function setEventFunctions(network){
 }
 
 
+
 state.container = network_div   // network div from panel template.
 state.nodes = new vis.DataSet(JSON.parse(data.nodes));
 state.edges = new vis.DataSet(JSON.parse(data.edges));
+
+// Drag & Drop support
+
+function handleDrop (dropEvent) {
+    dropEvent.preventDefault()
+    const files = dropEvent.dataTransfer.files
+    console.log('Files dropped:', files)
+    let drop_event = state.network.DOMtoCanvas({ // eslint-disable-line no-unused-vars
+    x: dropEvent.clientX,
+    y: dropEvent.clientY
+  })
+    drop_event.files = []
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const reader = new FileReader()
+        reader.onload = function (event) {
+            const fileContent = event.target.result
+            console.log('File content:', fileContent)
+            // Here you can process the file content as needed
+            drop_event.files.push({name: file.name, content: fileContent})
+        }
+        reader.readAsDataURL(file)
+        if (i === files.length - 1) {
+            reader.onloadend = function () {
+                // All files have been processed
+                console.log('All files processed:', drop_event.files)
+                // trigger a custom event or call a function to handle the files
+                writeEventData("fileDrop", drop_event);
+            }}
+    }
+
+
+
+}
+function addContainerEventListeners (container) {
+  container.addEventListener('dragenter', function (e) {
+    e.preventDefault()
+
+    container.style.border = '1px solid black'
+    // container.style.cssText = "border: 5px solid lightgray"
+  }, false)
+  container.addEventListener('dragleave', function (e) {
+    container.style.border = '1px solid lightgray'
+  }, false)
+  container.addEventListener('drop', function (e) {
+    e.preventDefault()
+    handleDrop(e) // eslint-disable-line no-undef
+  }, false)
+  container.addEventListener('dragover', function (e) {
+    e.preventDefault()
+  }, false)
+}
+addContainerEventListeners(state.container)
 
 // Optionen aus dem Python-Widget lesen (data.options als JSON-String)
 let parsedOptions = {};
@@ -170,5 +224,5 @@ setEventFunctions(state.network)
 
 // updating functions
 state.update_nodes = function(){
-    state.nodes.updateOnly(JSON.parse(data.nodes))
+    state.nodes.update(JSON.parse(data.nodes))
 }

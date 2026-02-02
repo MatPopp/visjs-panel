@@ -2,6 +2,8 @@ LICENSE
 README.md
 pyproject.toml
 src/visjs_panel/__init__.py
+src/visjs_panel/panel_visjs.js
+src/visjs_panel/utils.py
 src/visjs_panel/visjs_panel.py
 src/visjs_panel.egg-info/PKG-INFO
 src/visjs_panel.egg-info/SOURCES.txt
