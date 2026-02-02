@@ -9,9 +9,15 @@ import panel as pn
 from visjs_panel.utils import data_url_to_bytes
 #from pprint import pprint
 import json
+import pandas as pd
+from io import StringIO
+# Plotly lokal importieren, um Abhängigkeit nur bei Bedarf zu ziehen
+import plotly.express as px
 
 from panel.reactive import ReactiveHTML
 import param
+
+pn.extension("plotly", "jsoneditor")
 
 #pn.extension(css_files = ['https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/dist/vis-network.min.css'])
 
@@ -236,16 +242,88 @@ class GraphDetailTool:
         nodes_list = json.loads(self.visjs_panel.nodes)
         current_node_dict = [node for node in nodes_list if node["id"]==node_id][0]
         self.detail_col.append(pn.pane.Markdown(f"### Node ID: {current_node_dict['id']}"))
-       # self.detail_col.append(pn.widgets.JSONEditor(value= current_node_dict))
+        self.detail_col.append(pn.widgets.JSONEditor(value= current_node_dict))
         self.detail_col.append(pn.pane.Markdown(json.dumps(current_node_dict)))
         print("Current node dict:", current_node_dict)
 
         ## re-build visualizations column
         self.visualizations_col.clear()
-        if "image" in current_node_dict:
 
+        # Images
+        if "image" in current_node_dict:
             self.visualizations_col.append(pn.pane.Image(data_url_to_bytes(current_node_dict["image"])))
 
+        # .csv files
+        if "data" in current_node_dict:
+            if (
+                    current_node_dict["data"].startswith("data:text/csv")
+                    or current_node_dict["data"].startswith("data:application/vnd.ms-excel")
+            ):
+                csv_bytes = data_url_to_bytes(current_node_dict["data"])
+                csv_str = csv_bytes.decode("utf-8")
+
+                # Delimiter automatisch erkennen
+                df = pd.read_csv(
+                    StringIO(csv_str),
+                    sep=None,
+                    engine="python",
+                )
+
+                self.visualizations_col.append(pn.pane.Markdown("### CSV Data Preview"))
+                self.visualizations_col.append(
+                    pn.widgets.DataFrame(df, width=600, height=300)
+                )
+
+                # Spaltenlisten bestimmen
+                all_cols = list(df.columns)
+                numeric_cols = list(df.select_dtypes(include="number").columns)
+
+                if len(numeric_cols) == 0:
+                    self.visualizations_col.append(
+                        pn.pane.Markdown(
+                            "*(Keine numerischen Spalten für Plotly-Plot gefunden.)*"
+                        )
+                    )
+                    return
+
+                # Default-Auswahl
+                default_x = all_cols[0]
+                default_y = numeric_cols[0]
+
+                x_select = pn.widgets.Select(
+                    name="x-Achse",
+                    options=all_cols,
+                    value=default_x,
+                )
+                y_select = pn.widgets.Select(
+                    name="y-Achse",
+                    options=numeric_cols,
+                    value=default_y,
+                )
+
+                def make_figure(x_col, y_col):
+                    # Falls y\-Spalte nicht numerisch ist, leer zurückgeben
+                    if y_col not in df.select_dtypes(include="number").columns:
+                        return pn.pane.Markdown(
+                            "*(Gewählte y\-Spalte ist nicht numerisch.)*"
+                        )
+                    fig = px.line(
+                        df,
+                        x=x_col,
+                        y=y_col,
+                        title=f"Plot von '{y_col}' gegen '{x_col}'",
+                    )
+                    return pn.pane.Plotly(fig, config={"responsive": True})
+
+                plot_pane = pn.bind(make_figure, x_col=x_select, y_col=y_select)
+
+                self.visualizations_col.append(pn.pane.Markdown("### CSV Plot"))
+                self.visualizations_col.append(
+                    pn.Column(
+                        pn.Row(x_select, y_select, width=250),
+                        plot_pane,
+                    )
+                )
 
     def __panel__(self):
         return self._panel
