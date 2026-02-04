@@ -37,6 +37,8 @@ class VisJS(ReactiveHTML):
     nodes = param.String(default="[]")
     edges = param.String(default="[]")
     network_event_queue = param.String(default="[]")
+    manipulation_state = param.String(default="disableEditMode") # "addNodeMode", "addEdgeMode"
+
     # Neue Eigenschaft: options als JSON-String, der ins JS uebergeben wird
     options = param.String(default="{}")
 
@@ -53,7 +55,8 @@ class VisJS(ReactiveHTML):
     _scripts = {
         'render': js_string,
         'nodes': "state.update_nodes()",
-        'edges': "console.log('edges changed:',data.edges)"
+        'edges': "state.update_edges()",
+        'manipulation_state': "state.update_manipulation_state()",
     }
     __javascript__ = [
         # "https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"  ## external link
@@ -81,9 +84,9 @@ class VisJS(ReactiveHTML):
 
         self.network_event_callback = network_event_callback
 
-        print("nodes: ", self.nodes)
-        print("edges: ", self.edges)
-        print("options: ", self.options)
+        #print("nodes: ", self.nodes)
+        #print("edges: ", self.edges)
+        #print("options: ", self.options)
         super().__init__(**params)
         self.param.watch(self.print_nodes, "nodes")
         self.param.watch(self.print_edges, "edges")
@@ -152,7 +155,7 @@ class VisJS(ReactiveHTML):
         files = event.get("files", None)
         if files:
             for file in files:
-                print("Dropped file:", file)
+                #print("Dropped file:", file)
                 if "content" in file:
                     if file["content"].startswith("data:image"):
                         new_nodes = json.loads(self.nodes)
@@ -185,6 +188,19 @@ class VisJS(ReactiveHTML):
                         self.nodes = json.dumps(new_nodes)  # Trigger update
 
 
+    def disable_edit_mode(self):
+        self.manipulation_state = "" # toggle to re-trigger
+        self.manipulation_state = "disableEditMode"
+
+    def add_node_mode(self):
+        self.manipulation_state = "" # toggle to re-trigger
+        self.manipulation_state = "addNodeMode"
+
+    def add_edge_mode(self):
+        self.manipulation_state = "" # toggle to re-trigger
+        self.manipulation_state = "addEdgeMode"
+
+
 
 
 
@@ -197,8 +213,23 @@ class GraphDetailTool:
         self.edges = edges
         self.build_panel()
 
+        self.current_node_jsoneditor = None
+
 
     def build_panel(self):
+
+        self.disable_edit_button = pn.widgets.Button(name="Disable Edit", button_type="primary")
+        self.disable_edit_button.on_click(lambda event: self.visjs_panel.disable_edit_mode())
+        self.add_node_button = pn.widgets.Button(name="Add Node", button_type="success")
+        self.add_node_button.on_click(lambda event: self.visjs_panel.add_node_mode())
+        self.add_edge_button = pn.widgets.Button(name="Add Edge", button_type="success")
+        self.add_edge_button.on_click(lambda event: self.visjs_panel.add_edge_mode())
+        self.edit_row = pn.Row(
+            self.disable_edit_button,
+            self.add_node_button,
+            self.add_edge_button,
+        )
+
         self.visjs_panel = VisJS(value="set in constructor",
                                  nodes=self.nodes,
                                  edges=self.edges,
@@ -206,13 +237,15 @@ class GraphDetailTool:
                                  height=600,
                                  network_event_callback=self.network_event_callback,
                                  )
-
+        self.graph_col = pn.Column(self.edit_row, self.visjs_panel)
 
         self.visualizations_col = pn.Column(pn.pane.Markdown("## Click on node for Visualizations"),
                                             name="Visualization")
         self.detail_col= pn.Column(pn.pane.Markdown("## Click on a node to see details"), name = "Details")
+
         self.detail_tabs = pn.Tabs(self.visualizations_col, self.detail_col, )
-        self._panel = pn.Row(self.visjs_panel, self.detail_tabs)
+
+        self._panel = pn.Row(self.graph_col, self.detail_tabs)
 
     def network_event_callback(self, event_name, event_params_dict):
         """
@@ -233,17 +266,41 @@ class GraphDetailTool:
             for node_id in node_ids:
                 self.show_node_details(node_id)
 
+    def update_node_callback(self, event):
+        """
+        Callback for node updates from the JSON editor.
+        """
+        print("Node updated:", event)
+        new_node_dict = event.new
+        self.update_node(new_node_dict)
+
+    def update_node(self, new_node_dict):
+        """
+        Update a node in the visjs-panel.
+        """
+        print("Updating node:", new_node_dict)
+        nodes_list = json.loads(self.visjs_panel.nodes)
+        for i, node in enumerate(nodes_list):
+            if node["id"] == new_node_dict["id"]:
+                nodes_list[i] = new_node_dict
+                break
+        self.visjs_panel.nodes = json.dumps(nodes_list)
+
     def show_node_details(self, node_id):
         """
         Show details for a clicked node.
         """
+
         print("Showing details for node:", node_id)
         self.detail_col.clear()
         nodes_list = json.loads(self.visjs_panel.nodes)
         current_node_dict = [node for node in nodes_list if node["id"]==node_id][0]
         self.detail_col.append(pn.pane.Markdown(f"### Node ID: {current_node_dict['id']}"))
-        self.detail_col.append(pn.widgets.JSONEditor(value= current_node_dict))
-        self.detail_col.append(pn.pane.Markdown(json.dumps(current_node_dict)))
+
+        self.current_node_jsoneditor = pn.widgets.JSONEditor(value= current_node_dict)
+        self.current_node_jsoneditor.param.watch(self.update_node_callback, "value")
+
+        self.detail_col.append(self.current_node_jsoneditor)
         print("Current node dict:", current_node_dict)
 
         ## re-build visualizations column
@@ -305,7 +362,7 @@ class GraphDetailTool:
                     # Falls y\-Spalte nicht numerisch ist, leer zurückgeben
                     if y_col not in df.select_dtypes(include="number").columns:
                         return pn.pane.Markdown(
-                            "*(Gewählte y\-Spalte ist nicht numerisch.)*"
+                            "*(Gewählte y-Spalte ist nicht numerisch.)*"
                         )
                     fig = px.line(
                         df,
@@ -323,6 +380,26 @@ class GraphDetailTool:
                         pn.Row(x_select, y_select, width=250),
                         plot_pane,
                     )
+                )
+            #text files
+            print("Checking for text data in node...")
+            if current_node_dict["data"].startswith("data:text/plain"):
+                text_bytes = data_url_to_bytes(current_node_dict["data"])
+                text_str = text_bytes.decode("utf-8")
+                self.visualizations_col.append(pn.pane.Markdown("### Text Preview"))
+                self.visualizations_col.append(
+                    pn.pane.Markdown(f"```\n{text_str}\n```")
+                )
+
+            #pdf files
+            # todo: find out why this can take a minute for 6MB pdf
+            print("Checking for pdf data in node...")
+            print("start of data:", current_node_dict["data"][:50])
+            if current_node_dict["data"].startswith("data:application/pdf"):
+                pdf_bytes = data_url_to_bytes(current_node_dict["data"])
+                self.visualizations_col.append(pn.pane.Markdown("### PDF Preview"))
+                self.visualizations_col.append(
+                    pn.pane.PDF(pdf_bytes, width=600, height=800)
                 )
 
     def __panel__(self):

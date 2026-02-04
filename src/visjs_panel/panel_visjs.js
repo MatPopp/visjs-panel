@@ -79,20 +79,30 @@ function setEventFunctions(network){
 
 
     network.on('dragEnd', function (params) {
-        if (params.nodes.length>0){
-            node = state.nodes.get(params.nodes[0])
-            position = network.getPosition(params.nodes[0])   //setting the current position is necessary to prevent snap-back to initial position
-            console.log(position)
-            node.x=position.x
-            node.y=position.y
-            node.fixed=true
-            state.nodes.update(node)
-            data.nodes = JSON.stringify(state.nodes.get())
+    if (params.nodes.length > 0) {
 
-            // add the dragEnd event to the network_event_queue
-            writeEventData("dragEnd", params);
-        }
+        // update each node in datset
+        for (let node of state.nodes.get()){
 
+
+            console.log("node", node)
+
+            const pos = network.getPosition(node.id);
+            node.x = pos.x;
+            node.y = pos.y;
+
+            if (node.id === params.nodes[0]) {
+                console.log("fixing node:", node.id)
+                node.fixed = true;  // fixiere nur den gerade gezogenen Knoten
+            }
+            state.nodes.update(node);
+        };
+        // Den kompletten Node\-State zurück in data.nodes schreiben
+        data.nodes = JSON.stringify(state.nodes.get());
+
+        // Event in die Queue schreiben
+        writeEventData("dragEnd", params);
+    }
     });
 
 
@@ -225,4 +235,23 @@ setEventFunctions(state.network)
 // updating functions
 state.update_nodes = function(){
     state.nodes.update(JSON.parse(data.nodes))
+}
+state.update_edges = function(){
+    state.edges.update(JSON.parse(data.edges))
+}
+
+state.update_manipulation_state = function(){
+    console.log("update_manipulation_state:", data.manipulation_state)
+    if (data.manipulation_state==="disableEditMode"){
+        console.log("disableEditMode")
+        state.network.disableManipulation()
+    }
+    if (data.manipulation_state==="addNodeMode"){
+        console.log("addNodeMode")
+        state.network.addNodeMode()
+    }
+    if (data.manipulation_state==="addEdgeMode"){
+        console.log("addEdgeMode")
+        state.network.addEdgeMode()
+    }
 }
