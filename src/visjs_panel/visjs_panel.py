@@ -14,7 +14,7 @@ from io import StringIO
 # Plotly lokal importieren, um Abhängigkeit nur bei Bedarf zu ziehen
 import plotly.express as px
 
-from panel.reactive import ReactiveHTML
+from panel.custom import AnyWidgetComponent
 import param
 
 pn.extension("plotly", "jsoneditor")
@@ -32,7 +32,7 @@ _js_path = _pkg_files(__package__).joinpath("panel_visjs.js")
 js_string = _js_path.read_text(encoding="utf-8")
 
 
-class VisJS(ReactiveHTML):
+class VisJS(AnyWidgetComponent):
     value = param.String(default='no response so far')
     nodes = param.String(default="[]")
     edges = param.String(default="[]")
@@ -42,26 +42,7 @@ class VisJS(ReactiveHTML):
     # Neue Eigenschaft: options als JSON-String, der ins JS uebergeben wird
     options = param.String(default="{}")
 
-    #
-    _template = """ 
-   <div id="network_div" style="position:absolute;width:800px;height:600px;
-   background-color:#ffffff;border:1px solid #000000;" onclick="${_on_div_clicked}"> 
-   </div>
-    """
-
-    # By declaring an _extension_name the component should be loaded explicitly with pn.extension('material-components')
-    # _extension_name = 'VisJS'
-
-    _scripts = {
-        'render': js_string,
-        'nodes': "state.update_nodes()",
-        'edges': "state.update_edges()",
-        'manipulation_state': "state.update_manipulation_state()",
-    }
-    __javascript__ = [
-        # "https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"  ## external link
-        'https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/dist/vis-network.min.js'
-    ]
+    _esm = js_string
 
     def __init__(self, nodes=None, edges=None, value=None,
                  network_event_callback=None,
@@ -113,9 +94,6 @@ class VisJS(ReactiveHTML):
                 self.handle_network_event(event_name, event_params)
             self.network_event_queue = json.dumps(network_event_queue_list)
 
-    def _on_div_clicked(self, event):
-        pass
-        # print("div clicked", event)
 
     def expand_node(self, node_id):
         print("not implemented so far, expand node:", node_id)
