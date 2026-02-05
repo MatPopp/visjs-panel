@@ -36,8 +36,8 @@ class VisJS(AnyWidgetComponent):
     value = param.String(default='no response so far')
     nodes = param.String(default="[]")
     edges = param.String(default="[]")
-    network_event_queue = param.String(default="[]")
     manipulation_state = param.String(default="disableEditMode") # "addNodeMode", "addEdgeMode"
+    _event_data = param.String(default="")  # Single event parameter for JS->Python communication
 
     # Neue Eigenschaft: options als JSON-String, der ins JS uebergeben wird
     options = param.String(default="{}")
@@ -71,7 +71,7 @@ class VisJS(AnyWidgetComponent):
         super().__init__(**params)
         self.param.watch(self.print_nodes, "nodes")
         self.param.watch(self.print_edges, "edges")
-        self.param.watch(self.network_event_handler, "network_event_queue")
+        self.param.watch(self._on_event, "_event_data")
 
     def print_nodes(self, event):
         print("nodes: ", self.nodes)
@@ -79,20 +79,22 @@ class VisJS(AnyWidgetComponent):
     def print_edges(self, event):
         print("nodes: ", self.edges)
 
-    def network_event_handler(self, event):
+    def _on_event(self, event):
         """
-        Callback for visjs-network events.
+        Handle events from JavaScript via Panel's parameter mechanism.
+        This is the single entry point for all events from JavaScript.
         """
-        print("network_event_queue: ", self.network_event_queue)
+        if not event.new or event.new == "":
+            return
 
-        while len(json.loads(self.network_event_queue)) > 0:
-            network_event_queue_list = json.loads(self.network_event_queue)
-            event_json = network_event_queue_list.pop(0)
-            event_name = event_json.get("event_name", None)
-            event_params = event_json.get("event_params", None)
+        try:
+            event_data = json.loads(event.new)
+            event_name = event_data.get("event_name", None)
+            event_params = event_data.get("event_params", None)
             if event_name and event_params:
                 self.handle_network_event(event_name, event_params)
-            self.network_event_queue = json.dumps(network_event_queue_list)
+        except json.JSONDecodeError:
+            print(f"Failed to parse event data: {event.new}")
 
 
     def expand_node(self, node_id):

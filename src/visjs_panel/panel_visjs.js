@@ -37,11 +37,14 @@ export async function render({ model, el }) {
     options: {}
   };
 
-  // Function to write event data into the event queue
-  function writeEventData(event_name, event_params) {
-    const queue = JSON.parse(model.get('network_event_queue'));
-    queue.push({ "event_name": event_name, "event_params": event_params });
-    model.set('network_event_queue', JSON.stringify(queue));
+  // Function to send event data to Python via Panel's parameter mechanism
+  function sendEventToPython(event_name, event_params) {
+    const event_data = JSON.stringify({
+      "event_name": event_name,
+      "event_params": event_params,
+      "timestamp": Date.now()  // Add timestamp to ensure parameter change is detected
+    });
+    model.set('_event_data', event_data);
     model.save_changes();
   }
 
@@ -51,7 +54,7 @@ export async function render({ model, el }) {
       if (params.nodes.length > 0) {
         console.log(params);
         let data = state.nodes.get(params.nodes[0]);
-        writeEventData("click", params);
+        sendEventToPython("click", params);
       }
     });
 
@@ -61,7 +64,7 @@ export async function render({ model, el }) {
           network.openCluster(params.nodes[0]);
           return;
         }
-        writeEventData("doubleClick", params);
+        sendEventToPython("doubleClick", params);
 
         // Re-enable physics when the user double-clicks a node
         const currentOptions = state.options || {};
@@ -77,32 +80,32 @@ export async function render({ model, el }) {
 
     network.on('oncontext', function (params) {
       console.log("oncontext");
-      writeEventData("oncontext", params);
+      sendEventToPython("oncontext", params);
     });
 
     network.on('selectNode', function (params) {
       console.log("selectNode");
-      writeEventData("selectNode", params);
+      sendEventToPython("selectNode", params);
     });
 
     network.on('selectEdge', function (params) {
       console.log("selectEdge");
-      writeEventData("selectEdge", params);
+      sendEventToPython("selectEdge", params);
     });
 
     network.on('hoverNode', function (params) {
       console.log("hoverNode");
-      writeEventData("hoverNode", params);
+      sendEventToPython("hoverNode", params);
     });
 
     network.on('hoverEdge', function (params) {
       console.log("hoverEdge");
-      writeEventData("hoverEdge", params);
+      sendEventToPython("hoverEdge", params);
     });
 
     network.on('zoom', function (params) {
       console.log("zoom");
-      writeEventData("zoom", params);
+      sendEventToPython("zoom", params);
     });
 
     network.on('dragEnd', function (params) {
@@ -126,8 +129,8 @@ export async function render({ model, el }) {
         model.set('nodes', JSON.stringify(state.nodes.get()));
         model.save_changes();
 
-        // Write event to queue
-        writeEventData("dragEnd", params);
+        // Send event to Python
+        sendEventToPython("dragEnd", params);
       }
     });
 
@@ -142,7 +145,7 @@ export async function render({ model, el }) {
         console.log(node);
         state.nodes.update(node);
 
-        writeEventData("dragStart", params);
+        sendEventToPython("dragStart", params);
       }
     });
 
@@ -179,7 +182,7 @@ export async function render({ model, el }) {
       if (i === files.length - 1) {
         reader.onloadend = function () {
           console.log('All files processed:', drop_event.files);
-          writeEventData("fileDrop", drop_event);
+          sendEventToPython("fileDrop", drop_event);
         };
       }
     }
